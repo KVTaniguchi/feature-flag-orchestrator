@@ -1,0 +1,28 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "FeatureFlags",
+  "description": "Declarative configuration for feature flags.",
+  "type": "object",
+  "properties": {
+    "flags": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "description": { "type": "string" },
+          "group": { "type": "string" },
+          "state": {
+            "type": "string",
+            "enum": ["on", "off", "rollout", "stale"]
+          },
+          "dependencies": {
+            "type": "array",
+            "items": { "type": "string" }
+          }
+        },
+        "required": ["id", "state"]
+      }
+    }
+  }
+}

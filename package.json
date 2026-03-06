@@ -1,0 +1,12 @@
+{
+  "name": "feature-flag-orchestrator",
+  "version": "1.0.0",
+  "description": "Teaches Claude how to manage feature flags as code—automating releases, executing safe kill switches, and stripping out stale flag debt without ever touching a vendor UI.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}
