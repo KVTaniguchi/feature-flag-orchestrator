@@ -11,6 +11,34 @@ Most teams manage feature flags through "ClickOps", leading to:
 
 This plugin teaches Claude to manage the entire lifecycle of your flags via a local manifest, DataDog APM, and the LaunchDarkly MCP server.
 
+Here is a simple, step-by-step workflow of how you would use this tool in your scenario:
+
+Step 1: Define your flags in code instead of a spreadsheet Instead of just keeping that list of URLs, keys, and descriptions in a wiki or spreadsheet, you create a simple file in your code repository called flags.yml (inside the state/ folder).
+
+It looks like this:
+
+yaml
+flags:
+  - id: "new_checkout_flow"
+    description: "The redesigned Apple Pay checkout screen"
+    group: "checkout_redesign"
+    state: "off"
+  - id: "promo_banner_v2"
+    description: "Holiday promo banner on the homepage"
+    group: "marketing"
+    state: "rollout"
+Step 2: Sync to your Flag Provider (like Datadog) Instead of going to the Datadog website and manually clicking "Create Flag" 50 times, you open your terminal and simply type: /flag-sync The plugin reads your flags.yml and makes all the API calls to set them up for you.
+
+Step 3: Release a group safely When the marketing team says, "Turn on the holiday promo," you don't go hunt for the toggle in a Web UI. You just tell Claude in your terminal:
+
+"Initiate the marketing release group."
+
+The tool will:
+
+Check your error monitors first (Pre-flight safety check).
+Flip the switch via the API.
+Watch the error rates for a minute. If they spike, it automatically flips the switch back off!
+
 ## Installation
 
 ```bash
