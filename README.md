@@ -9,7 +9,7 @@ Most teams manage feature flags through "ClickOps", leading to:
 * **Blind Releases** — Flipping switches without immediately correlating the action to active error rates.
 * **Technical Debt** — Leaving `if/else` flag logic in the codebase for months after a feature is fully launched.
 
-This plugin teaches Claude to manage the entire lifecycle of your flags via a local manifest and the Datadog Feature Management API.
+This plugin teaches Claude to manage the entire lifecycle of your flags via a local manifest, DataDog APM, and the LaunchDarkly MCP server.
 
 ## Installation
 
@@ -58,7 +58,15 @@ Connects local flag keys to real-time observability data.
 
 * Checks active Datadog Monitors for P1/P2 alerts.
 * Correlates flag keys with RUM (Real User Monitoring) error rates.
-* Verifies HTTP 200 responses from the Datadog Feature Management API.
+* Verifies HTTP 200 responses from observability endpoints during releases.
+
+### `launchdarkly-actuator`
+
+Interfaces with the required LaunchDarkly MCP server.
+**Focus Areas:**
+
+* Translates orchestrated intents into LaunchDarkly MCP tool calls.
+* Safely updates boolean feature flag states in LaunchDarkly.
 
 ## Skills
 
