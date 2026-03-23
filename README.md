@@ -51,10 +51,54 @@ claude plugin install feature-flag-orchestrator
 
 ## Usage
 
+### Comment-Driven Flag Creation
+
+The fastest way to create a flag is to annotate the code you want to guard, then let Claude handle the rest.
+
+**Step 1 — Write a `@flag` annotation above the code you want to guard:**
+
+```typescript
+// @flag key=new-checkout-flow prereq=legacy-checkout when=false group=checkout-redesign platforms=web,android
+// @flag-intent: Skip new checkout block until legacy checkout is fully disabled
+function runNewCheckout() {
+  // ...
+}
+```
+
+```kotlin
+// @flag key=new-checkout-flow prereq=legacy-checkout when=false platforms=android
+// @flag-intent: Skip new checkout block until legacy checkout is fully disabled
+fun runNewCheckout() {
+    // ...
+}
+```
+
+**Annotation fields:**
+
+| Field | Required | Description |
+| --- | --- | --- |
+| `key` | ✅ | Flag identifier (must be unique) |
+| `prereq` | — | Key of a prerequisite flag |
+| `when` | — | Required state of prereq for this flag to activate (`true`/`false`, default: `false`) |
+| `group` | — | Release group for batch operations |
+| `platforms` | — | Comma-separated target platforms: `web`, `android`, `ios`, `backend`. Inferred from file extension if omitted. |
+
+The line immediately after the `@flag` line can be a `@flag-intent:` comment with a human-readable description.
+
+**Step 2 — Tell Claude to run `/flag-from-comments`.**
+
+Claude will:
+1. Scan the codebase for all `@flag` annotations
+2. Merge new flags into `state/flags.yml`
+3. Create each flag in LaunchDarkly via MCP (boolean, default off)
+4. Set up prerequisite rules in LD to match the `prereq`/`when` constraints
+5. Output ready-to-use implementation snippets for every platform listed
+
 ### Commands
 
 ```bash
-/flag-sync          # Syncs your local flags.yml to Datadog
+/flag-from-comments # Scans @flag annotations → flags.yml → LaunchDarkly
+/flag-sync          # Syncs your local flags.yml to LaunchDarkly
 /flag-release [grp] # Executes a pre-flight check and batch-toggles a release group
 /flag-audit         # Scans codebase for flag evaluations and maps dependencies
 /flag-debt          # Identifies and removes code for flags at 100% for >30 days
@@ -63,6 +107,7 @@ claude plugin install feature-flag-orchestrator
 ### Natural Prompts
 
 ```text
+"Create flags from the annotations I just added."
 "Set up the flags for the new user profile redesign."
 "Checkout is throwing 500s. Check Datadog and kill the responsible flag."
 "Initiate the profile redesign release group."
@@ -72,6 +117,24 @@ claude plugin install feature-flag-orchestrator
 ## Agents
 
 Agent definitions that Claude uses to understand your code and telemetry.
+
+### `comment-scanner`
+
+Scans TypeScript, Kotlin, and Swift files for `@flag` annotations.
+**Focus Areas:**
+
+* Parses `@flag` and `@flag-intent:` comment syntax.
+* Infers target platform from file extension (`.ts`/`.tsx` → web, `.kt` → android, `.swift` → ios).
+* Merges duplicate keys when the same flag is annotated in multiple files.
+
+### `flag-merger`
+
+Reads `state/flags.yml`, upserts annotation data, and writes it back.
+**Focus Areas:**
+
+* Adds new flags with `state: "off"` (flags are off until explicitly released).
+* Preserves existing `state` values — annotations never override developer-set state.
+* Translates `prereq` into the `dependencies` array for LaunchDarkly compatibility.
 
 ### `flag-analyzer`
 
@@ -105,6 +168,7 @@ Skills that activate automatically based on context:
 
 | Skill | Trigger |
 | --- | --- |
+| `flag-from-comments` | `@flag` annotation in code / `/flag-from-comments` / "create flags from comments" |
 | `config-as-code` | "Create a flag" / "Set up flags" |
 | `batch-release-coordinator` | "Release [X]" / "Toggle the group" |
 | `kill-switch-protocol` | "Kill [X]" / "Disable the feature" |

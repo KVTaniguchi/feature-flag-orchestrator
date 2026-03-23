@@ -11,14 +11,41 @@
         "properties": {
           "id": { "type": "string" },
           "description": { "type": "string" },
+          "intent": {
+            "type": "string",
+            "description": "Human-readable intent from the @flag-intent annotation"
+          },
           "group": { "type": "string" },
           "state": {
             "type": "string",
             "enum": ["on", "off", "rollout", "stale"]
           },
+          "platforms": {
+            "type": "array",
+            "items": { "type": "string", "enum": ["web", "android", "ios", "backend"] },
+            "description": "Client platforms that implement this flag"
+          },
+          "prereq": {
+            "type": "string",
+            "description": "Key of the prerequisite flag (from @flag prereq= annotation)"
+          },
+          "when": {
+            "type": "string",
+            "enum": ["true", "false"],
+            "description": "Required state of the prereq flag for this flag to be active"
+          },
           "dependencies": {
             "type": "array",
-            "items": { "type": "string" }
+            "items": { "type": "string" },
+            "description": "Mirrors prereq as an array for LaunchDarkly compatibility"
+          },
+          "sourceFile": {
+            "type": "string",
+            "description": "Source file where the @flag annotation was declared"
+          },
+          "sourceLine": {
+            "type": "integer",
+            "description": "Line number of the @flag annotation"
           }
         },
         "required": ["id", "state"]
