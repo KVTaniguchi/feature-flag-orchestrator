@@ -40,6 +40,7 @@ describe('/flag-from-comments command', () => {
     expect(result.graph.rolloutOrder).toEqual(['legacy-checkout', 'new-checkout']);
     expect(result.graph.dependentsById['legacy-checkout']).toEqual(['new-checkout']);
     expect(result.ld.mode).toBe('action-plan');
+    expect(result.ld.provider).toBe('launchdarkly');
     expect(result.ld.actionPlan.setPrerequisites).toEqual([
       { key: 'new-checkout', prereq: 'legacy-checkout', when: 'false' },
     ]);

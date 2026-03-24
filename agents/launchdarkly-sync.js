@@ -5,10 +5,13 @@
  * available, otherwise produces a machine-readable action plan.
  */
 
+const { buildActionPlan } = require('./build-action-plan');
+
 const API_BASE = 'https://app.launchdarkly.com/api/v2';
 
 class LaunchDarklySync {
   constructor(opts = {}) {
+    this.providerId = 'launchdarkly';
     this.fetchImpl = opts.fetchImpl || global.fetch;
     this.apiToken = opts.apiToken || process.env.LD_API_TOKEN || '';
     this.projectKey = opts.projectKey || process.env.LD_PROJECT_KEY || '';
@@ -26,10 +29,14 @@ class LaunchDarklySync {
     };
   }
 
+  buildActionPlan(args) {
+    return buildActionPlan(args);
+  }
+
   async sync({ flags, graph }) {
     const actionPlan = this.buildActionPlan({ flags, graph });
     if (!this.isAvailable()) {
-      return { mode: 'action-plan', actionPlan, executed: [] };
+      return { mode: 'action-plan', provider: 'launchdarkly', actionPlan, executed: [] };
     }
 
     const executed = [];
@@ -55,41 +62,11 @@ class LaunchDarklySync {
 
     return {
       mode: 'launchdarkly-api',
+      provider: 'launchdarkly',
       actionPlan,
       executed,
       results: { createResults, prereqResults },
     };
-  }
-
-  buildActionPlan({ flags, graph }) {
-    const ordered = graph.rolloutOrder.length
-      ? graph.rolloutOrder
-      : (flags || []).map(f => f.id);
-    const byId = {};
-    for (const f of flags || []) byId[f.id] = f;
-
-    const createFlags = [];
-    const setPrerequisites = [];
-    for (const id of ordered) {
-      const flag = byId[id];
-      if (!flag) continue;
-      createFlags.push({
-        key: flag.id,
-        name: flag.id,
-        description: flag.intent || flag.description || `Feature flag: ${flag.id}`,
-        tags: Array.from(new Set([flag.group, ...(flag.platforms || [])].filter(Boolean))),
-      });
-
-      if (flag.prereq) {
-        setPrerequisites.push({
-          key: flag.id,
-          prereq: flag.prereq,
-          when: String(flag.when || 'false'),
-        });
-      }
-    }
-
-    return { createFlags, setPrerequisites };
   }
 
   async getFlag(key) {

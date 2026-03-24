@@ -9,7 +9,7 @@ Most teams manage feature flags through "ClickOps", leading to:
 * **Blind Releases** — Flipping switches without immediately correlating the action to active error rates.
 * **Technical Debt** — Leaving `if/else` flag logic in the codebase for months after a feature is fully launched.
 
-This plugin teaches Claude to manage the entire lifecycle of your flags via a local manifest, DataDog APM, and the LaunchDarkly MCP server.
+This plugin teaches Claude to manage the entire lifecycle of your flags via a local manifest, DataDog APM, and a feature-flag backend (LaunchDarkly or Harness REST; LaunchDarkly MCP is still an option for manual steps).
 
 Here is a simple, step-by-step workflow of how you would use this tool in your scenario:
 
@@ -48,6 +48,19 @@ Watch the error rates for a minute. If they spike, it automatically flips the sw
 claude plugin marketplace add custom/feature-flag-orchestrator
 claude plugin install feature-flag-orchestrator
 ```
+
+### Feature flag provider (LaunchDarkly or Harness)
+
+`/flag-from-comments` syncs the manifest to **one** backend. Choose it with `FEATURE_FLAG_PROVIDER` (`launchdarkly` is the default) or pass `provider` in code when invoking the command.
+
+| Variable | LaunchDarkly | Harness |
+| --- | --- | --- |
+| Provider | `FEATURE_FLAG_PROVIDER=launchdarkly` | `FEATURE_FLAG_PROVIDER=harness` |
+| Auth | `LD_API_TOKEN` | `HARNESS_API_KEY` (Admin API key; `x-api-key` header) |
+| Scope | `LD_PROJECT_KEY`, `LD_ENV_KEY` | `HARNESS_ACCOUNT_ID`, `HARNESS_ORG_ID`, `HARNESS_PROJECT_ID` |
+| Optional | — | `HARNESS_ENV_ID` (passed on GET/PATCH when set) |
+
+Harness uses the Admin API at `https://api.harness.io/cf/admin/features` ([reference](https://apidocs.harness.io/feature-flags)). New boolean flags are created with `true` / `false` variation identifiers. Prerequisites are sent on **create**; if a flag already exists, the agent attempts **PATCH** with `replacePrerequisites`—confirm this instruction against your Harness version if calls fail (capture a working PATCH from the UI or official examples).
 
 ## Usage
 

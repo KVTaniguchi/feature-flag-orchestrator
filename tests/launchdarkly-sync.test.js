@@ -22,6 +22,7 @@ describe('LaunchDarklySync', () => {
     const result = await sync.sync({ flags, graph });
 
     expect(result.mode).toBe('action-plan');
+    expect(result.provider).toBe('launchdarkly');
     expect(result.executed).toEqual([]);
     expect(result.actionPlan.createFlags).toHaveLength(2);
   });
@@ -56,6 +57,7 @@ describe('LaunchDarklySync', () => {
     const result = await sync.sync({ flags, graph });
 
     expect(result.mode).toBe('launchdarkly-api');
+    expect(result.provider).toBe('launchdarkly');
     expect(result.executed).toEqual([
       { type: 'create', key: 'new-checkout' },
       { type: 'prerequisite', key: 'new-checkout', prereq: 'legacy-checkout', when: 'false' },

@@ -2,27 +2,28 @@
  * Command: /flag-from-comments
  *
  * Scans source files for @flag annotations, merges them into state/flags.yml,
- * and outputs a LaunchDarkly sync plan for Claude to execute via MCP.
+ * and outputs a vendor sync plan (LaunchDarkly or Harness) for Claude to execute via API/MCP.
  *
  * Usage: /flag-from-comments [--dir <path>]
  *
  * After this command runs, Claude will:
  *  1. Show a summary of discovered annotations
  *  2. Confirm what was written to flags.yml
- *  3. Execute LaunchDarkly MCP calls to create each new flag
- *  4. Set prerequisite rules in LD per the annotation's prereq/when fields
+ *  3. Create each new flag via the configured provider (API or MCP)
+ *  4. Set prerequisite rules per the annotation's prereq/when fields
  *  5. Output per-platform implementation snippets
  */
 
 const CommentScanner = require('../agents/comment-scanner');
 const FlagMerger = require('../agents/flag-merger');
 const FlagGraph = require('../agents/flag-graph');
-const LaunchDarklySync = require('../agents/launchdarkly-sync');
+const { resolveSyncAgent } = require('../agents/resolve-sync-agent');
 
 module.exports = async function flagFromComments(args = {}) {
   const rootDir = args.dir || process.cwd();
   const format = args.format || 'text';
   const executeLd = args.executeLd !== false;
+  const syncAgent = resolveSyncAgent({ provider: args.provider });
 
   const emit = (...msg) => {
     if (format === 'text') console.log(...msg);
@@ -43,7 +44,11 @@ module.exports = async function flagFromComments(args = {}) {
       added: [],
       updated: [],
       graph: null,
-      ld: { mode: 'none', actionPlan: { createFlags: [], setPrerequisites: [] } },
+      ld: {
+        mode: 'none',
+        provider: syncAgent.providerId,
+        actionPlan: { createFlags: [], setPrerequisites: [] },
+      },
     };
   }
 
@@ -122,17 +127,22 @@ module.exports = async function flagFromComments(args = {}) {
   emit('```');
   emit();
 
-  const ldSync = new LaunchDarklySync();
   const ld = executeLd
-    ? await ldSync.sync({ flags: manifest.flags || [], graph })
-    : { mode: 'action-plan', actionPlan: ldSync.buildActionPlan({ flags: manifest.flags || [], graph }), executed: [] };
+    ? await syncAgent.sync({ flags: manifest.flags || [], graph })
+    : {
+        mode: 'action-plan',
+        provider: syncAgent.providerId,
+        actionPlan: syncAgent.buildActionPlan({ flags: manifest.flags || [], graph }),
+        executed: [],
+      };
 
-  if (ld.mode === 'launchdarkly-api') {
-    emit('LaunchDarkly sync: executed via API');
-    emit(`  Creates applied: ${ld.results.createResults.length}`);
-    emit(`  Prerequisites applied: ${ld.results.prereqResults.length}`);
+  const apiModes = new Set(['launchdarkly-api', 'harness-api']);
+  if (apiModes.has(ld.mode)) {
+    emit(`Feature flag sync (${ld.provider}): executed via API`);
+    emit(`  Creates: ${ld.results.createResults.length}`);
+    emit(`  Prerequisite results: ${ld.results.prereqResults.length}`);
   } else if (ld.mode === 'action-plan') {
-    emit('LaunchDarkly sync: API unavailable, generated action plan only');
+    emit(`Feature flag sync (${ld.provider}): API unavailable or dry-run, action plan only`);
     emit(`  Planned creates: ${ld.actionPlan.createFlags.length}`);
     emit(`  Planned prerequisites: ${ld.actionPlan.setPrerequisites.length}`);
   }
